@@ -1,3 +1,12 @@
+# Screenshots
+
+
+https://github.com/user-attachments/assets/fb6037ec-d019-4554-8db5-47c4ba082e80
+
+<img width="328" alt="Screenshot 2024-09-18 at 8 03 42 PM" src="https://github.com/user-attachments/assets/6d810bd7-2c3f-48f1-85c5-45bc2fe06e67">
+
+
+
 # 🌩️ Weather Watch
 
 Introducing *Weather Watch*, the app that delivers accurate weather forecasts, ensuring you’re always prepared for the day’s weather with a smile!
