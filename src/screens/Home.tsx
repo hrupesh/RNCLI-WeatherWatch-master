@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -7,61 +7,30 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
-} from 'react-native';
-import {
-  IGeocodingData,
-  IGeocodingSearchResult,
-  ILocation,
-  IWeatherData,
-} from '../types';
-import {DEFAULT_LOCATION_LAT_LNG} from './constants';
-import {getLocationData, getWeatherData} from '../api';
-import getWeatherImage from '../helpers/getWeatherImage';
-import {
-  debounce,
-  getAverageTemperatureForDay,
-  getDayNameFromDate,
-} from '../helpers';
+} from "react-native";
+import { SearchItem, WeeklyWeatherItem } from "../components";
+import getWeatherImage from "../helpers/getWeatherImage";
+import { useFetchWeatherData, useSearchLocation } from "../hooks";
+import { IGeocodingData } from "../types";
 
 const getKeyExtractor = (item: string) => item;
 const getSearchKeyExtractor = (item: IGeocodingData) => item.id.toString();
 
 export const Home: React.FC = () => {
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [selectedLocation, setSelectedLocation] = useState<ILocation>(
-    DEFAULT_LOCATION_LAT_LNG,
-  );
-  const [weatherData, setWeatherData] = useState<IWeatherData | null>(null);
-  const [searchText, setSearchText] = useState<string>('');
-  const [searchResults, setSearchResults] =
-    useState<IGeocodingSearchResult | null>(null);
-
-  const fetchWeatherData = useCallback(async () => {
-    setIsLoading(true);
-    const res = await getWeatherData(selectedLocation);
-    setWeatherData(res);
-    setIsLoading(false);
-  }, [selectedLocation]);
-
-  useEffect(() => {
-    fetchWeatherData();
-  }, [fetchWeatherData]);
-
-  const searchForLocation = async (text: string) => {
-    const res = await getLocationData(text);
-    setSearchResults(res);
-  };
-
-  const handleSearchTextChange = useCallback((text: string) => {
-    setSearchText(text);
-    if (!text) {
-      setSearchResults(null);
-      return;
-    }
-    debounce(searchForLocation(text), 1000);
-  }, []);
+  const {
+    isLoading,
+    selectedLocation,
+    setSelectedLocation,
+    weatherData,
+    fetchWeatherData,
+  } = useFetchWeatherData();
+  const {
+    searchText,
+    searchResults,
+    handleSearchTextChange,
+    handleLocationItemPress,
+  } = useSearchLocation({ fetchWeatherData, setSelectedLocation });
 
   const renderWeeklyWeatherItem = ({
     item,
@@ -69,60 +38,23 @@ export const Home: React.FC = () => {
   }: {
     item: string;
     index: number;
-  }) => {
-    const {
-      daily: {temperature_2m_max, temperature_2m_min, weathercode},
-    } = weatherData as IWeatherData;
-    return (
-      <View style={styles.weatherItem}>
-        <Text style={styles.subText}>{getDayNameFromDate(item)}</Text>
-        <Image
-          source={{uri: getWeatherImage(weathercode?.[index])}}
-          height={46}
-          width={46}
-        />
-        <Text style={styles.subText}>
-          {`${getAverageTemperatureForDay(
-            temperature_2m_min?.[index],
-            temperature_2m_max?.[index],
-          )}${weatherData?.daily_units?.temperature_2m_max}`}
-        </Text>
-      </View>
-    );
-  };
+  }) => (
+    <WeeklyWeatherItem item={item} index={index} weatherData={weatherData} />
+  );
 
-  const handleLocationItemPress = (item: IGeocodingData) => () => {
-    setSelectedLocation({
-      latitude: item.latitude,
-      longitude: item.longitude,
-      name: item.name,
-    });
-    setSearchText('');
-    setSearchResults(null);
-    fetchWeatherData();
-  };
-
-  const renderSearchItem = ({item}: {item: IGeocodingData}): JSX.Element => {
-    return (
-      <TouchableOpacity
-        style={styles.searchItem}
-        onPress={handleLocationItemPress(item)}>
-        <Text style={styles.text}>{`${item.name}${
-          item?.admin1 ? ', ' + item?.admin1 : ''
-        }${item?.country ? ', ' + item?.country : ''}`}</Text>
-      </TouchableOpacity>
-    );
-  };
+  const renderSearchItem = ({ item }: { item: IGeocodingData }) => (
+    <SearchItem item={item} handleLocationItemPress={handleLocationItemPress} />
+  );
 
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator
           testID="loading-indicator"
-          color={'tomato'}
-          size={'large'}
+          color={"tomato"}
+          size={"large"}
         />
-        <Text style={styles.loadingText}>{'Loading....'}</Text>
+        <Text style={styles.loadingText}>{"Loading...."}</Text>
       </View>
     );
   }
@@ -135,7 +67,7 @@ export const Home: React.FC = () => {
           value={searchText}
           onChangeText={handleSearchTextChange}
           style={styles.textInput}
-          placeholderTextColor={'#000'}
+          placeholderTextColor={"#000"}
           autoCapitalize="none"
           autoComplete="off"
           autoCorrect={false}
@@ -154,10 +86,8 @@ export const Home: React.FC = () => {
             />
           ) : (
             <Text
-              style={[
-                styles.text,
-                styles.ph16,
-              ]}>{`No Results Found for ${searchText}`}</Text>
+              style={[styles.text, styles.ph16]}
+            >{`No Results Found for ${searchText}`}</Text>
           )}
         </View>
       ) : (
@@ -165,9 +95,8 @@ export const Home: React.FC = () => {
           <View style={styles.centered}>
             <Text style={styles.text}>{selectedLocation?.name}</Text>
             <Text
-              style={
-                styles.temperatureText
-              }>{`${weatherData?.current?.temperature_2m} ${weatherData?.current_units?.temperature_2m}`}</Text>
+              style={styles.temperatureText}
+            >{`${weatherData?.current?.temperature_2m} ${weatherData?.current_units?.temperature_2m}`}</Text>
             <Image
               testID="weather-image"
               source={{
@@ -194,12 +123,12 @@ export const Home: React.FC = () => {
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 16,
   },
   container: {
@@ -207,47 +136,34 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   centered: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 24,
   },
   text: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: 1.4,
-  },
-  subText: {
-    fontSize: 14,
-    fontWeight: '400',
-    letterSpacing: 1.2,
-    color: '#444',
   },
   temperatureText: {
     fontSize: 48,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1.4,
     marginTop: 12,
   },
-  weatherItem: {
-    alignItems: 'center',
-    marginRight: 6,
-  },
-  list: {marginVertical: 16},
+  list: { marginVertical: 16 },
   textInput: {
     height: 40,
-    borderColor: '#000',
+    borderColor: "#000",
     borderWidth: 1,
     borderRadius: 8,
     padding: 10,
     margin: 10,
-    backgroundColor: '#fff4',
-    width: Dimensions.get('window').width - 32,
-    alignSelf: 'center',
+    backgroundColor: "#fff4",
+    width: Dimensions.get("window").width - 32,
+    alignSelf: "center",
     marginBottom: 12,
   },
   ph16: {
     paddingHorizontal: 16,
-  },
-  searchItem: {
-    marginVertical: 8,
   },
 });
